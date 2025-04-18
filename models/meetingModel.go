@@ -6,9 +6,10 @@ import (
 
 type Meeting struct {
 	gorm.Model
-	Date        string
-	StartTime   string
-	Duration    int
-	Description string
-	Link        string
+	CreatorID   string `json:"creator_id" gorm:"index"`
+	Date        string `json:"date"`
+	StartTime   string `json:"start_time"`
+	Duration    int    `json:"duration"`
+	Description string `json:"description"`
+	Link        string `json:"link"`
 }

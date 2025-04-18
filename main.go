@@ -16,18 +16,22 @@ func init() {
 func main() {
 	r := gin.Default()
 
-	// POST запросы
-	r.POST("/signup", controllers.SignUp)
-	r.POST("/login", controllers.Login)
-	r.POST("/logout", controllers.Logout)
-	r.POST("/meetings", controllers.CreateMeeting)
-	r.POST("/meetings/:id", controllers.UpdateMeeting)
-	// GET запросы
-	r.GET("/validate", middleware.RequireAuth, controllers.Validate)
-	r.GET("/upcoming_meetings", controllers.GetAllUpcomingMeetings)
-	r.GET("/current_meeting", controllers.GetCurrentMeeting)
-	// DELETE запросы
-	r.DELETE("/meetings/:id")
+	r.Use(middleware.CORSMiddleware())
+
+	v1 := r.Group("/api/v1")
+	{
+		v1.POST("/auth/signup", controllers.SignUp)
+		v1.POST("/auth/signin", controllers.Login)
+		v1.POST("/auth/logout", controllers.Logout)
+		v1.GET("/auth/validate", middleware.RequireAuth, controllers.Validate)
+
+		v1.POST("/meetings", controllers.CreateMeeting)
+		v1.GET("/meetings/upcoming", controllers.GetAllUpcomingMeetings)
+		v1.GET("/meetings/current", controllers.GetCurrentMeeting)
+		v1.PUT("/meetings/:id", controllers.UpdateMeeting)
+		v1.DELETE("/meetings/:id", controllers.DeleteMeeting)
+		v1.GET("/meetings/:id", controllers.GetMeetingByCode)
+	}
 
 	r.Run()
 }

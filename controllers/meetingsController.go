@@ -13,18 +13,18 @@ import (
 
 func CreateMeeting(c *gin.Context) {
 	var body struct {
-		Date        string `json:"date"`
-		StartTime   string `json:"start_time"`
-		Duration    int    `json:"duration"`
+		CreatorID   string `json:"creator_id" binding:"required"`
+		Date        string `json:"date" binding:"required"`
+		StartTime   string `json:"start_time" binding:"required"`
+		Duration    int    `json:"duration" binding:"required"`
 		Description string `json:"description"`
 		Link        string `json:"link"`
 	}
 
-	if err := c.Bind(&body); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Не удалось спарсить тело запроса",
+			"error": "Неверные данные запроса: " + err.Error(),
 		})
-
 		return
 	}
 
@@ -32,7 +32,6 @@ func CreateMeeting(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Неверный формат даты. Ожидается ДД.ММ.ГГГГ",
 		})
-
 		return
 	}
 
@@ -40,7 +39,6 @@ func CreateMeeting(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Неверный формат времени. Ожидается ЧЧ:ММ",
 		})
-
 		return
 	}
 
@@ -50,19 +48,20 @@ func CreateMeeting(c *gin.Context) {
 	endTimeStr := endTime.Format("15:04")
 
 	initializers.DB.Model(&models.Meeting{}).
+		Where("creator_id = ?", body.CreatorID).
 		Where("date = ?", body.Date).
-		Where("NOT (ADDTIME(start_time, CONCAT(Duration, ':00')) <= ? OR start_time >= ?)", body.StartTime, endTimeStr).
+		Where("start_time < ? AND ADDTIME(start_time, SEC_TO_TIME(Duration * 60)) > ?", endTimeStr, body.StartTime).
 		Count(&conflictingMeetings)
 
 	if conflictingMeetings > 0 {
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "Встреча пересекается с существующими",
+			"error": "Встреча пересекается с существующими встречами пользователя",
 		})
-
 		return
 	}
 
 	meeting := models.Meeting{
+		CreatorID:   body.CreatorID,
 		Date:        body.Date,
 		StartTime:   body.StartTime,
 		Duration:    body.Duration,
@@ -74,7 +73,6 @@ func CreateMeeting(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Не удалось создать встречу",
 		})
-
 		return
 	}
 
@@ -85,22 +83,29 @@ func CreateMeeting(c *gin.Context) {
 }
 
 func GetAllUpcomingMeetings(c *gin.Context) {
+	creatorID := c.Query("creator_id")
+	if creatorID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Необходимо указать creator_id",
+		})
+		return
+	}
+
 	now := time.Now()
 	currentDate := now.Format("02.01.2006")
 	currentTime := now.Format("15:04")
 
 	var meetings []models.Meeting
 
-	result := initializers.DB.Where(
-		"(date = ? AND start_time > ?) OR date > ?",
-		currentDate, currentTime, currentDate,
-	).Order("date, start_time").Find(&meetings)
+	result := initializers.DB.Where("creator_id = ?", creatorID).
+		Where("(date = ? AND start_time > ?) OR date > ?", currentDate, currentTime, currentDate).
+		Order("date, start_time").
+		Find(&meetings)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Не удалось получить список встреч",
 		})
-
 		return
 	}
 
@@ -110,6 +115,14 @@ func GetAllUpcomingMeetings(c *gin.Context) {
 }
 
 func GetCurrentMeeting(c *gin.Context) {
+	creatorID := c.Query("creator_id")
+	if creatorID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Необходимо указать creator_id",
+		})
+		return
+	}
+
 	now := time.Now()
 	currentDate := now.Format("02.01.2006")
 	currentTime := now.Format("15:04")
@@ -117,9 +130,10 @@ func GetCurrentMeeting(c *gin.Context) {
 	var meeting models.Meeting
 
 	err := initializers.DB.
+		Where("creator_id = ?", creatorID).
 		Where("date = ?", currentDate).
 		Where("start_time <= ?", currentTime).
-		Where("ADDTIME(start_time, CONCAT(Duration, ':00')) > ?", currentTime).
+		Where("ADDTIME(start_time, SEC_TO_TIME(duration * 60)) > ?", currentTime).
 		First(&meeting).
 		Error
 
@@ -129,13 +143,11 @@ func GetCurrentMeeting(c *gin.Context) {
 				"message": "Сейчас нет активных встреч",
 				"meeting": nil,
 			})
-
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Ошибка при поиске текущей встречи",
 		})
-
 		return
 	}
 
@@ -147,15 +159,8 @@ func GetCurrentMeeting(c *gin.Context) {
 func UpdateMeeting(c *gin.Context) {
 	id := c.Param("id")
 
-	var meeting models.Meeting
-	if err := initializers.DB.First(&meeting, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Встреча не найдена",
-		})
-		return
-	}
-
 	var body struct {
+		CreatorID   string `json:"creator_id" binding:"required"`
 		Date        string `json:"date"`
 		StartTime   string `json:"start_time"`
 		Duration    int    `json:"duration"`
@@ -163,9 +168,17 @@ func UpdateMeeting(c *gin.Context) {
 		Link        string `json:"link"`
 	}
 
-	if err := c.Bind(&body); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Неверный формат данных",
+		})
+		return
+	}
+
+	var meeting models.Meeting
+	if err := initializers.DB.Where("creator_id = ?", body.CreatorID).First(&meeting, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Встреча не найдена или у вас нет прав на её изменение",
 		})
 		return
 	}
@@ -200,6 +213,7 @@ func UpdateMeeting(c *gin.Context) {
 		var conflicts int64
 		initializers.DB.Model(&models.Meeting{}).
 			Where("id != ?", id).
+			Where("creator_id = ?", body.CreatorID).
 			Where("date = ?", date).
 			Where("NOT (ADDTIME(start_time, CONCAT(Duration, ':00')) <= ? OR start_time >= ?)",
 				startTime,
@@ -208,7 +222,7 @@ func UpdateMeeting(c *gin.Context) {
 
 		if conflicts > 0 {
 			c.JSON(http.StatusConflict, gin.H{
-				"error": "Обновлённые данные конфликтуют с другими встречами",
+				"error": "Обновлённые данные конфликтуют с другими встречами пользователя",
 			})
 			return
 		}
@@ -250,10 +264,21 @@ func UpdateMeeting(c *gin.Context) {
 func DeleteMeeting(c *gin.Context) {
 	id := c.Param("id")
 
+	var body struct {
+		CreatorID string `json:"creator_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Необходимо указать creator_id",
+		})
+		return
+	}
+
 	var meeting models.Meeting
-	if err := initializers.DB.First(&meeting, id).Error; err != nil {
+	if err := initializers.DB.Where("creator_id = ?", body.CreatorID).First(&meeting, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Встреча не найдена",
+			"error": "Встреча не найдена или у вас нет прав на её удаление",
 		})
 		return
 	}
@@ -267,5 +292,27 @@ func DeleteMeeting(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Встреча успешно удалена",
+	})
+}
+
+func GetMeetingByCode(c *gin.Context) {
+	code := c.Param("code")
+
+	var meeting models.Meeting
+	if err := initializers.DB.Where("link LIKE ?", "%"+code).First(&meeting).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Встреча не найдена",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Ошибка при получении информации о встрече",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"meeting": meeting,
 	})
 }

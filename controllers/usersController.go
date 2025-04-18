@@ -14,8 +14,8 @@ import (
 
 func SignUp(c *gin.Context) {
 	var body struct {
-		Name     string
-		Password string
+		Name     string `json:"name"`
+		Password string `json:"password"`
 	}
 
 	if c.Bind(&body) != nil {
@@ -52,8 +52,8 @@ func SignUp(c *gin.Context) {
 
 func Login(c *gin.Context) {
 	var body struct {
-		Name     string
-		Password string
+		Name     string `json:"name"`
+		Password string `json:"password"`
 	}
 
 	if c.Bind(&body) != nil {
@@ -101,7 +101,10 @@ func Login(c *gin.Context) {
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("Authorization", tokenString, 3600*24*30, "", "", false, true)
 
-	c.JSON(http.StatusOK, gin.H{})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Авторизован",
+		"user":    user,
+	})
 }
 
 func Logout(c *gin.Context) {
