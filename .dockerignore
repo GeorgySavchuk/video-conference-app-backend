@@ -1,0 +1,6 @@
+.git
+.gitignore
+README.md
+*.exe
+.vscode/
+video_conference_app_backend 

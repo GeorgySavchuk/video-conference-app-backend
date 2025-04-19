@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: video-conference-backend
+    env: docker
+    buildCommand: docker build -t video-conference-backend .
+    startCommand: docker run -p $PORT:8080 -e PORT=$PORT -e DB=$DB -e JWT_SECRET=$JWT_SECRET -e VIDEOSDK_API_KEY=$VIDEOSDK_API_KEY -e VIDEOSDK_SECRET_KEY=$VIDEOSDK_SECRET_KEY -e VIDEOSDK_API_ENDPOINT=$VIDEOSDK_API_ENDPOINT video-conference-backend
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: VIDEOSDK_API_KEY
+        sync: false
+      - key: VIDEOSDK_SECRET_KEY
+        sync: false
+      - key: VIDEOSDK_API_ENDPOINT
+        value: https://api.videosdk.live/v2 

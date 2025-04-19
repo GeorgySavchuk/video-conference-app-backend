@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/GeorgySavchuk/video-conference-app-backend/controllers"
 	"github.com/GeorgySavchuk/video-conference-app-backend/initializers"
 	"github.com/GeorgySavchuk/video-conference-app-backend/middleware"
@@ -33,5 +36,9 @@ func main() {
 		v1.GET("/meetings/:id", controllers.GetMeetingByCode)
 	}
 
-	r.Run()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(fmt.Sprintf(":%s", port))
 }

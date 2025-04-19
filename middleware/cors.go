@@ -12,8 +12,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		origin := c.Request.Header.Get("Origin")
 
 		allowedDomains := []string{
-			"video-conference-app-frontend-hbmo.vercel.app",
-			"your-production-domain.com",
+			"video-conference-app-frontend-b9x6.vercel.app",
 			"localhost",
 			"127.0.0.1",
 		}

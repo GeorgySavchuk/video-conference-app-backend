@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: video-conference-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DB=root:pass8909@tcp(host.docker.internal:3306)/video_conference_app?charset=utf8mb4&parseTime=True&loc=Local
+      - JWT_SECRET=savjahlvkhakjvhajhvjskahsvsjklahjvhalkjvhalkvhlkj
+      - VIDEOSDK_API_KEY=4dae969a-218e-4c63-a63b-d6ac28c2258d
+      - VIDEOSDK_SECRET_KEY=8b36064b1417c503a551d5eadf477b0ba2913f4792c8bb93ab1a24a54951da2c
+      - VIDEOSDK_API_ENDPOINT=https://api.videosdk.live/v2
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: video-conference-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=video_conference
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql_data: 
