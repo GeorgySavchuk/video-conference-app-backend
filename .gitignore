@@ -1,1 +1,8 @@
 .env
+go.mod
+go.sum
+localhost+3-key.pem
+localhost+3.pem
+render.yaml
+video_conference_app_backend
+video_conference_app_backend.exe
