@@ -12,12 +12,13 @@ func CORSMiddleware() gin.HandlerFunc {
 		origin := c.Request.Header.Get("Origin")
 
 		allowedDomains := []string{
-			"video-conference-app-frontend-hbmo.vercel.app",
+			"hellconf.netlify.app",
 			"localhost",
 			"127.0.0.1",
 		}
 
 		allowedSchemes := []string{
+			"http://",
 			"https://",
 		}
 

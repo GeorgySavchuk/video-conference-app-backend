@@ -41,12 +41,5 @@ func main() {
 		port = "8080"
 	}
 
-	certFile := "./localhost+3.pem"
-	keyFile := "./localhost+3-key.pem"
-
-	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		r.Run(fmt.Sprintf(":%s", port))
-	} else {
-		r.RunTLS(fmt.Sprintf(":%s", port), certFile, keyFile)
-	}
+	r.Run(fmt.Sprintf(":%s", port))
 }
