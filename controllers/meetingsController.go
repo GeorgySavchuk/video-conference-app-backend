@@ -98,8 +98,9 @@ func GetAllUpcomingMeetings(c *gin.Context) {
 	var meetings []models.Meeting
 
 	result := initializers.DB.Where("creator_id = ?", creatorID).
-		Where("(date = ? AND start_time > ?) OR date > ?", currentDate, currentTime, currentDate).
-		Order("date, start_time").
+		Where("(date = ? AND start_time > ?) OR (STR_TO_DATE(date, '%d.%m.%Y') > STR_TO_DATE(?, '%d.%m.%Y'))",
+			currentDate, currentTime, currentDate).
+		Order("STR_TO_DATE(date, '%d.%m.%Y'), start_time").
 		Find(&meetings)
 
 	if result.Error != nil {
