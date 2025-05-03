@@ -50,7 +50,7 @@ func CreateMeeting(c *gin.Context) {
 	initializers.DB.Model(&models.Meeting{}).
 		Where("creator_id = ?", body.CreatorID).
 		Where("date = ?", body.Date).
-		Where("start_time < ? AND ADDTIME(start_time, SEC_TO_TIME(Duration * 60)) > ?", endTimeStr, body.StartTime).
+		Where("start_time < ? AND (start_time::time + (duration * interval '1 minute')::interval)::text > ?", endTimeStr, body.StartTime).
 		Count(&conflictingMeetings)
 
 	if conflictingMeetings > 0 {
@@ -98,9 +98,9 @@ func GetAllUpcomingMeetings(c *gin.Context) {
 	var meetings []models.Meeting
 
 	result := initializers.DB.Where("creator_id = ?", creatorID).
-		Where("(date = ? AND start_time > ?) OR (STR_TO_DATE(date, '%d.%m.%Y') > STR_TO_DATE(?, '%d.%m.%Y'))",
+		Where("(date = ? AND start_time > ?) OR (TO_DATE(date, 'DD.MM.YYYY') > TO_DATE(?, 'DD.MM.YYYY'))",
 			currentDate, currentTime, currentDate).
-		Order("STR_TO_DATE(date, '%d.%m.%Y'), start_time").
+		Order("TO_DATE(date, 'DD.MM.YYYY'), start_time").
 		Find(&meetings)
 
 	if result.Error != nil {
@@ -134,7 +134,7 @@ func GetCurrentMeeting(c *gin.Context) {
 		Where("creator_id = ?", creatorID).
 		Where("date = ?", currentDate).
 		Where("start_time <= ?", currentTime).
-		Where("ADDTIME(start_time, SEC_TO_TIME(duration * 60)) > ?", currentTime).
+		Where("(start_time::time + (duration * interval '1 minute')::interval)::text > ?", currentTime).
 		First(&meeting).
 		Error
 
@@ -216,7 +216,7 @@ func UpdateMeeting(c *gin.Context) {
 			Where("id != ?", id).
 			Where("creator_id = ?", body.CreatorID).
 			Where("date = ?", date).
-			Where("NOT (ADDTIME(start_time, CONCAT(Duration, ':00')) <= ? OR start_time >= ?)",
+			Where("NOT ((start_time::time + (duration * interval '1 minute')::interval)::text <= ? OR start_time >= ?)",
 				startTime,
 				endTimeStr).
 			Count(&conflicts)
