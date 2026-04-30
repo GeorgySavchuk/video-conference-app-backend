@@ -1,4 +1,5 @@
 .env
+uploads/
 go.mod
 go.sum
 localhost+3-key.pem

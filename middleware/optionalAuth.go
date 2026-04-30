@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -12,10 +11,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func RequireAuth(c *gin.Context) {
+// OptionalAuth — при валидной cookie выставляет user; иначе пропускает без 401.
+func OptionalAuth(c *gin.Context) {
 	tokenString, err := c.Cookie("Authorization")
-	if err != nil || tokenString == "" {
-		c.AbortWithStatus(http.StatusUnauthorized)
+	if err != nil {
+		c.Next()
 		return
 	}
 
@@ -23,42 +23,31 @@ func RequireAuth(c *gin.Context) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 	if err != nil || token == nil || !token.Valid {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Next()
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Next()
 		return
 	}
-
-	exp, ok := claims["exp"].(float64)
-	if !ok || float64(time.Now().Unix()) >= exp {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	sub := claims["sub"]
-	if sub == nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
+	if exp, ok := claims["exp"].(float64); ok && float64(time.Now().Unix()) > exp {
+		c.Next()
 		return
 	}
 
 	var user models.User
-	initializers.DB.First(&user, sub)
-
+	initializers.DB.First(&user, claims["sub"])
 	if user.ID == 0 {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Next()
 		return
 	}
 
 	models.EnsureUserDefaultAvatar(initializers.DB, &user)
-
 	c.Set("user", user)
 	c.Next()
 }

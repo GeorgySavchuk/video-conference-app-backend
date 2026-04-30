@@ -22,7 +22,8 @@ cd video-conference-app-backend
    CREATE DATABASE video_conference;
    ```
 
-2. Настройте переменные окружения в файле `.env` или в вашей среде:
+2. Скопируйте `.env.example` в `.env` в корне бэкенда и заполните значения. При `go run main.go` переменные подхватываются из `.env` автоматически.
+   Минимум для БД:
    ```
    DB_HOST=localhost
    DB_USER=postgres
@@ -31,6 +32,7 @@ cd video-conference-app-backend
    DB_PORT=5432
    JWT_SECRET=your_jwt_secret
    ```
+   Для отправки писем (приглашения, напоминания) добавьте `SMTP_HOST`, `SMTP_FROM` и при необходимости `SMTP_USER`, `SMTP_PASSWORD` (см. комментарии в `.env.example`).
 
 ### Установка зависимостей
 ```bash

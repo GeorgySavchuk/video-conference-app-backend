@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"net/http"
+	"net/mail"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/GeorgySavchuk/video-conference-app-backend/initializers"
@@ -16,6 +18,7 @@ func SignUp(c *gin.Context) {
 	var body struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	if c.Bind(&body) != nil {
@@ -23,6 +26,34 @@ func SignUp(c *gin.Context) {
 			"error": "Не удалось спарсить тело запроса",
 		})
 
+		return
+	}
+
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Укажите логин"})
+		return
+	}
+
+	email := strings.TrimSpace(strings.ToLower(body.Email))
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Укажите email"})
+		return
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный email"})
+		return
+	}
+
+	var dupEmail models.User
+	if err := initializers.DB.Where("email = ?", email).First(&dupEmail).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Этот email уже зарегистрирован"})
+		return
+	}
+
+	var dupName models.User
+	if err := initializers.DB.Where("name = ?", name).First(&dupName).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Это имя пользователя уже занято"})
 		return
 	}
 
@@ -36,10 +67,17 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	user := models.User{Name: body.Name, Password: string(hash)}
+	// Avatar задаётся в models.User.BeforeCreate (случайный p0…p7).
+	user := models.User{Name: name, Password: string(hash), Email: email}
 	result := initializers.DB.Create(&user)
 
 	if result.Error != nil {
+		// На случай гонки или записи вне проверки выше — дубликат логина в БД.
+		var again models.User
+		if err := initializers.DB.Where("name = ?", name).First(&again).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Это имя пользователя уже занято"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Не удалось создать пользователя",
 		})
@@ -85,6 +123,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	models.EnsureUserDefaultAvatar(initializers.DB, &user)
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
@@ -103,7 +143,7 @@ func Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Авторизован",
-		"user":    user,
+		"user":    user.Public(),
 	})
 }
 
@@ -116,10 +156,15 @@ func Logout(c *gin.Context) {
 }
 
 func Validate(c *gin.Context) {
-	user, _ := c.Get("user")
+	raw, ok := c.Get("user")
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	u := raw.(models.User)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Авторизован",
-		"user":    user,
+		"user":    u.Public(),
 	})
 }

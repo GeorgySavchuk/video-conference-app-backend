@@ -30,7 +30,7 @@ func setupTestDB(t *testing.T) {
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("JWT_SECRET", "test_secret")
 
-	initializers.ConnectDB()
+	initializers.ConnectToDB()
 	initializers.DB.AutoMigrate(&models.User{})
 }
 
@@ -56,15 +56,27 @@ func TestSignUp(t *testing.T) {
 			payload: map[string]string{
 				"name":     "testuser",
 				"password": "testpass",
+				"email":    "testuser@example.com",
 			},
 			expectedStatus: http.StatusOK,
 			expectedError:  false,
+		},
+		{
+			name: "Регистрация с занятым email",
+			payload: map[string]string{
+				"name":     "otheruser",
+				"password": "testpass",
+				"email":    "testuser@example.com",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  true,
 		},
 		{
 			name: "Регистрация с существующим именем",
 			payload: map[string]string{
 				"name":     "testuser",
 				"password": "testpass",
+				"email":    "other@example.com",
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  true,
@@ -72,6 +84,16 @@ func TestSignUp(t *testing.T) {
 		{
 			name: "Регистрация без имени",
 			payload: map[string]string{
+				"password": "testpass",
+				"email":    "x@example.com",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  true,
+		},
+		{
+			name: "Регистрация без email",
+			payload: map[string]string{
+				"name":     "another",
 				"password": "testpass",
 			},
 			expectedStatus: http.StatusBadRequest,

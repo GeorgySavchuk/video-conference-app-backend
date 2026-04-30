@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/GeorgySavchuk/video-conference-app-backend/initializers"
@@ -13,12 +14,14 @@ import (
 
 func CreateMeeting(c *gin.Context) {
 	var body struct {
-		CreatorID   string `json:"creator_id" binding:"required"`
-		Date        string `json:"date" binding:"required"`
-		StartTime   string `json:"start_time" binding:"required"`
-		Duration    int    `json:"duration" binding:"required"`
-		Description string `json:"description"`
-		Link        string `json:"link"`
+		CreatorID    string   `json:"creator_id" binding:"required"`
+		RoomID       string   `json:"room_id"`
+		Date         string   `json:"date" binding:"required"`
+		StartTime    string   `json:"start_time" binding:"required"`
+		Duration     int      `json:"duration" binding:"required"`
+		Description  string   `json:"description"`
+		Link         string   `json:"link"`
+		InviteEmails []string `json:"invite_emails"`
 	}
 
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -62,6 +65,7 @@ func CreateMeeting(c *gin.Context) {
 
 	meeting := models.Meeting{
 		CreatorID:   body.CreatorID,
+		RoomID:      strings.TrimSpace(body.RoomID),
 		Date:        body.Date,
 		StartTime:   body.StartTime,
 		Duration:    body.Duration,
@@ -76,9 +80,13 @@ func CreateMeeting(c *gin.Context) {
 		return
 	}
 
+	sent, failed := AfterCreateMeetingInvites(meeting, body.InviteEmails)
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Встреча успешно создана",
-		"data":    meeting,
+		"message":                "Встреча успешно создана",
+		"data":                   meeting,
+		"invite_emails_sent":     sent,
+		"invite_emails_failed":   failed,
 	})
 }
 
@@ -130,11 +138,12 @@ func GetCurrentMeeting(c *gin.Context) {
 
 	var meeting models.Meeting
 
+	// Сравнение через ::time, не через ::text — иначе границы слота и «хвост» вида :ss ломают порядок.
 	err := initializers.DB.
 		Where("creator_id = ?", creatorID).
 		Where("date = ?", currentDate).
-		Where("start_time <= ?", currentTime).
-		Where("(start_time::time + (duration * interval '1 minute')::interval)::text > ?", currentTime).
+		Where("start_time::time <= ?::time", currentTime).
+		Where("(start_time::time + (duration * interval '1 minute'))::time > ?::time", currentTime).
 		First(&meeting).
 		Error
 
@@ -284,6 +293,15 @@ func DeleteMeeting(c *gin.Context) {
 		return
 	}
 
+	sent, failed := NotifySubscribersMeetingCancelled(meeting)
+
+	if err := initializers.DB.Where("meeting_id = ?", meeting.ID).Delete(&models.MeetingReminder{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Не удалось удалить подписки на напоминания",
+		})
+		return
+	}
+
 	if err := initializers.DB.Delete(&meeting).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Не удалось удалить встречу",
@@ -292,12 +310,14 @@ func DeleteMeeting(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Встреча успешно удалена",
+		"message":                    "Встреча успешно удалена",
+		"cancellation_emails_sent":   sent,
+		"cancellation_emails_failed":   failed,
 	})
 }
 
 func GetMeetingByCode(c *gin.Context) {
-	code := c.Param("code")
+	code := c.Param("id")
 
 	var meeting models.Meeting
 	if err := initializers.DB.Where("link LIKE ?", "%"+code).First(&meeting).Error; err != nil {
