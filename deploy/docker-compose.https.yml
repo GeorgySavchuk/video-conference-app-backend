@@ -1,0 +1,14 @@
+# Включает HTTPS после настройки сертификатов (см. deploy/README.md, раздел HTTPS).
+# Запуск:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.https.yml --env-file .env up -d
+#
+# Нужны файлы: nginx/prod-https.conf (из prod-https.conf.example) и каталог с сертификатами на хосте.
+
+services:
+  nginx:
+    ports:
+      - "443:443"
+    volumes:
+      # certbot/www уже смонтирован в docker-compose.prod.yml
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx/prod-https.conf:/etc/nginx/conf.d/https.conf:ro

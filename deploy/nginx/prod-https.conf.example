@@ -1,0 +1,21 @@
+# После получения сертификата Let’s Encrypt:
+# 1) Скопируйте: cp prod-https.conf.example prod-https.conf
+# 2) Замените YOUR_DOMAIN на свой FQDN (как в DNS и в .env).
+# 3) Поднимите стек с docker-compose.https.yml (см. deploy/README.md).
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name YOUR_DOMAIN;
+
+    ssl_certificate     /etc/letsencrypt/live/YOUR_DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    include /etc/nginx/snippets/proxy-locations.conf;
+}
