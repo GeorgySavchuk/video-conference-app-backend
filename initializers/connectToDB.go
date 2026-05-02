@@ -48,9 +48,8 @@ func databaseDSN() string {
 }
 
 func ConnectToDB() {
-	var err error
 	dsn := databaseDSN()
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+	cfg := &gorm.Config{
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
@@ -60,9 +59,20 @@ func ConnectToDB() {
 				Colorful:                  true,
 			},
 		),
-	})
-
-	if err != nil {
-		panic("Не удалось подключиться к базе данных: " + err.Error())
 	}
+
+	// Postgres и DNS Docker иногда не готовы сразу после `docker compose up` / restart docker.
+	var err error
+	for attempt := 1; ; attempt++ {
+		DB, err = gorm.Open(postgres.Open(dsn), cfg)
+		if err == nil {
+			return
+		}
+		if attempt >= 30 {
+			break
+		}
+		log.Printf("database: подключение не удалось (попытка %d/30): %v", attempt, err)
+		time.Sleep(2 * time.Second)
+	}
+	panic("Не удалось подключиться к базе данных: " + err.Error())
 }
