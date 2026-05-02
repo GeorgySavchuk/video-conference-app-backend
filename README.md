@@ -16,6 +16,10 @@ git clone https://github.com/GeorgySavchuk/video-conference-app-backend.git
 cd video-conference-app-backend
 ```
 
+### Деплой на VPS (Docker)
+
+Каталог **`deploy/`** в этом репозитории: `docker-compose.prod.yml`, Nginx и шаблон `.env` для поднятия API, Postgres, фронта и signaling на одной машине. Рядом на диске должны лежать клоны **video-conference-app-frontend** и **video-conference-app-signaling** — см. `deploy/README.md`.
+
 ### Настройка базы данных
 1. Создайте базу данных PostgreSQL:
    ```sql

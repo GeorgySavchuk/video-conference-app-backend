@@ -1,4 +1,5 @@
 .env
+deploy/.env
 uploads/
 go.mod
 go.sum

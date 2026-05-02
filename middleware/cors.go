@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,14 @@ func CORSMiddleware() gin.HandlerFunc {
 			"hellconf.netlify.app",
 			"localhost",
 			"127.0.0.1",
+		}
+		if extra := strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN_SUFFIXES")); extra != "" {
+			for _, s := range strings.Split(extra, ",") {
+				s = strings.TrimSpace(s)
+				if s != "" {
+					allowedDomains = append(allowedDomains, s)
+				}
+			}
 		}
 
 		allowedSchemes := []string{

@@ -10,6 +10,8 @@ COPY . .
 
 RUN go build -o main .
 
+RUN mkdir -p uploads
+
 EXPOSE 8080
 
 CMD ["./main"]
