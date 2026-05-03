@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -99,24 +100,41 @@ func GetAllUpcomingMeetings(c *gin.Context) {
 		return
 	}
 
-	now := time.Now()
-	currentDate := now.Format("02.01.2006")
-	currentTime := now.Format("15:04")
-
-	var meetings []models.Meeting
-
-	result := initializers.DB.Where("creator_id = ?", creatorID).
-		Where("(date = ? AND start_time > ?) OR (TO_DATE(date, 'DD.MM.YYYY') > TO_DATE(?, 'DD.MM.YYYY'))",
-			currentDate, currentTime, currentDate).
-		Order("TO_DATE(date, 'DD.MM.YYYY'), start_time").
-		Find(&meetings)
-
-	if result.Error != nil {
+	// Список «предстоящих»: слот ещё не закончился (start + duration > now).
+	// Сравнение через meetingStartLocal совпадает с письмами/напоминаниями и учитывает duration.
+	var all []models.Meeting
+	if err := initializers.DB.Where("creator_id = ?", creatorID).Find(&all).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Не удалось получить список встреч",
 		})
 		return
 	}
+
+	now := time.Now()
+	meetings := make([]models.Meeting, 0, len(all))
+	for _, m := range all {
+		start, err := meetingStartLocal(m)
+		if err != nil {
+			continue
+		}
+		dur := m.Duration
+		if dur < 0 {
+			dur = 0
+		}
+		end := start.Add(time.Duration(dur) * time.Minute)
+		if end.After(now) {
+			meetings = append(meetings, m)
+		}
+	}
+
+	sort.Slice(meetings, func(i, j int) bool {
+		si, errI := meetingStartLocal(meetings[i])
+		sj, errJ := meetingStartLocal(meetings[j])
+		if errI != nil || errJ != nil {
+			return false
+		}
+		return si.Before(sj)
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"meetings": meetings,
