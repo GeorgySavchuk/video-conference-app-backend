@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"os"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -33,6 +35,31 @@ func capitalizeFirstRU(s string) string {
 	return string(r)
 }
 
+var wallClockTZ struct {
+	once sync.Once
+	loc  *time.Location
+}
+
+// meetingWallClockLocation — зона для полей date/start_time из БД (настенное время).
+// MEETING_TZ=Europe/Moscow если контейнер в UTC, а расписание вводят по Москве.
+func meetingWallClockLocation() *time.Location {
+	wallClockTZ.once.Do(func() {
+		tz := strings.TrimSpace(os.Getenv("MEETING_TZ"))
+		if tz == "" {
+			wallClockTZ.loc = time.Local
+			return
+		}
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			log.Printf("meetings: MEETING_TZ %q invalid, using system local: %v", tz, err)
+			wallClockTZ.loc = time.Local
+			return
+		}
+		wallClockTZ.loc = loc
+	})
+	return wallClockTZ.loc
+}
+
 func formatGMTOffset(offSec int) string {
 	if offSec == 0 {
 		return "GMT+00:00"
@@ -48,7 +75,8 @@ func formatGMTOffset(offSec int) string {
 }
 
 func meetingStartLocal(m models.Meeting) (time.Time, error) {
-	d, err := time.ParseInLocation("02.01.2006", strings.TrimSpace(m.Date), time.Local)
+	loc := meetingWallClockLocation()
+	d, err := time.ParseInLocation("02.01.2006", strings.TrimSpace(m.Date), loc)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -57,7 +85,7 @@ func meetingStartLocal(m models.Meeting) (time.Time, error) {
 		return time.Time{}, err
 	}
 	h, mi, se := tm.Clock()
-	return time.Date(d.Year(), d.Month(), d.Day(), h, mi, se, 0, time.Local), nil
+	return time.Date(d.Year(), d.Month(), d.Day(), h, mi, se, 0, loc), nil
 }
 
 // Строка вида: «Среда, 29 апреля 2026, с 12:30 до 13:30 (GMT+03:00)» — как в календарных письмах.

@@ -29,6 +29,8 @@ services:
     environment:
       GIN_MODE: release
       PORT: "8080"
+      # Зона для date/start_time из БД; на VPS в UTC задайте Europe/Moscow, если расписание по РФ.
+      MEETING_TZ: ${MEETING_TZ:-}
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_USER: postgres
