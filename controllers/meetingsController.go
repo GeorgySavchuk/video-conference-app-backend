@@ -13,6 +13,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// CreateMeeting создаёт встречу и опционально рассылает приглашения.
+// @Summary      Создать встречу
+// @Description  Дата ДД.ММ.ГГГГ, время ЧЧ:ММ. При пересечении слотов — 409.
+// @Tags         meetings
+// @Accept       json
+// @Produce      json
+// @Param        body  body      CreateMeetingBody  true  "Данные встречи"
+// @Success      200   {object}  CreateMeetingSuccess
+// @Failure      400   {object}  ErrorJSON
+// @Failure      409   {object}  ErrorJSON
+// @Failure      500   {object}  ErrorJSON
+// @Router       /meetings [post]
 func CreateMeeting(c *gin.Context) {
 	var body struct {
 		CreatorID    string   `json:"creator_id" binding:"required"`
@@ -91,6 +103,15 @@ func CreateMeeting(c *gin.Context) {
 	})
 }
 
+// GetAllUpcomingMeetings возвращает встречи создателя, у которых конец слота ещё не прошёл.
+// @Summary      Предстоящие встречи
+// @Tags         meetings
+// @Produce      json
+// @Param        creator_id  query  string  true  "ID создателя (UUID)"
+// @Success      200  {object}  MeetingsUpcomingResponse
+// @Failure      400  {object}  ErrorJSON
+// @Failure      500  {object}  ErrorJSON
+// @Router       /meetings/upcoming [get]
 func GetAllUpcomingMeetings(c *gin.Context) {
 	creatorID := c.Query("creator_id")
 	if creatorID == "" {
@@ -141,6 +162,16 @@ func GetAllUpcomingMeetings(c *gin.Context) {
 	})
 }
 
+// GetCurrentMeeting возвращает активную на сейчас встречу или пустой meeting.
+// @Summary      Текущая встреча
+// @Description  Встреча на сегодня в интервале [start, start+duration).
+// @Tags         meetings
+// @Produce      json
+// @Param        creator_id  query  string  true  "ID создателя"
+// @Success      200  {object}  CurrentMeetingResponse
+// @Failure      400  {object}  ErrorJSON
+// @Failure      500  {object}  ErrorJSON
+// @Router       /meetings/current [get]
 func GetCurrentMeeting(c *gin.Context) {
 	creatorID := c.Query("creator_id")
 	if creatorID == "" {
@@ -184,6 +215,19 @@ func GetCurrentMeeting(c *gin.Context) {
 	})
 }
 
+// UpdateMeeting обновляет поля встречи при совпадении creator_id.
+// @Summary      Обновить встречу
+// @Tags         meetings
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string             true  "ID встречи"
+// @Param        body  body      UpdateMeetingBody  true  "Поля для обновления"
+// @Success      200   {object}  UpdateMeetingSuccess
+// @Failure      400   {object}  ErrorJSON
+// @Failure      404   {object}  ErrorJSON
+// @Failure      409   {object}  ErrorJSON
+// @Failure      500   {object}  ErrorJSON
+// @Router       /meetings/{id} [put]
 func UpdateMeeting(c *gin.Context) {
 	id := c.Param("id")
 
@@ -289,6 +333,18 @@ func UpdateMeeting(c *gin.Context) {
 	})
 }
 
+// DeleteMeeting удаляет встречу и напоминания по ней.
+// @Summary      Удалить встречу
+// @Tags         meetings
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string               true  "ID встречи"
+// @Param        body  body      DeleteMeetingBody    true  "creator_id"
+// @Success      200   {object}  DeleteMeetingSuccess
+// @Failure      400   {object}  ErrorJSON
+// @Failure      404   {object}  ErrorJSON
+// @Failure      500   {object}  ErrorJSON
+// @Router       /meetings/{id} [delete]
 func DeleteMeeting(c *gin.Context) {
 	id := c.Param("id")
 
@@ -334,6 +390,16 @@ func DeleteMeeting(c *gin.Context) {
 	})
 }
 
+// GetMeetingByCode ищет встречу по суффиксу кода в поле link.
+// @Summary      Встреча по коду ссылки
+// @Description  Параметр id — суффикс после /meeting/ или /room/ в link.
+// @Tags         meetings
+// @Produce      json
+// @Param        id   path  string  true  "Код из ссылки"
+// @Success      200  {object}  GetMeetingByCodeSuccess
+// @Failure      404  {object}  ErrorJSON
+// @Failure      500  {object}  ErrorJSON
+// @Router       /meetings/{id} [get]
 func GetMeetingByCode(c *gin.Context) {
 	code := c.Param("id")
 

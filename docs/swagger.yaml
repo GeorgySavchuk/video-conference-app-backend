@@ -1,0 +1,422 @@
+basePath: /api/v1
+definitions:
+  controllers.CreateMeetingBody:
+    properties:
+      creator_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      date:
+        example: 15.05.2006
+        type: string
+      description:
+        type: string
+      duration:
+        example: 60
+        type: integer
+      invite_emails:
+        items:
+          type: string
+        type: array
+      link:
+        type: string
+      room_id:
+        type: string
+      start_time:
+        example: "14:30"
+        type: string
+    type: object
+  controllers.CreateMeetingSuccess:
+    properties:
+      data:
+        $ref: '#/definitions/models.Meeting'
+      invite_emails_failed:
+        type: integer
+      invite_emails_sent:
+        type: integer
+      message:
+        type: string
+    type: object
+  controllers.CurrentMeetingResponse:
+    properties:
+      meeting:
+        $ref: '#/definitions/models.Meeting'
+      message:
+        type: string
+    type: object
+  controllers.DeleteMeetingBody:
+    properties:
+      creator_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  controllers.DeleteMeetingSuccess:
+    properties:
+      cancellation_emails_failed:
+        type: integer
+      cancellation_emails_sent:
+        type: integer
+      message:
+        type: string
+    type: object
+  controllers.ErrorJSON:
+    properties:
+      error:
+        example: Неверные данные запроса
+        type: string
+    type: object
+  controllers.GetMeetingByCodeSuccess:
+    properties:
+      meeting:
+        $ref: '#/definitions/models.Meeting'
+    type: object
+  controllers.MeetingsUpcomingResponse:
+    properties:
+      meetings:
+        items:
+          $ref: '#/definitions/models.Meeting'
+        type: array
+    type: object
+  controllers.ReminderStatusSuccess:
+    properties:
+      subscribed:
+        type: boolean
+    type: object
+  controllers.SimpleMessageSuccess:
+    properties:
+      message:
+        type: string
+    type: object
+  controllers.SubscribeReminderBody:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      room_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  controllers.SubscribeReminderCreated:
+    properties:
+      message:
+        type: string
+    type: object
+  controllers.UpdateMeetingBody:
+    properties:
+      creator_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      link:
+        type: string
+      start_time:
+        type: string
+    type: object
+  controllers.UpdateMeetingSuccess:
+    properties:
+      data:
+        $ref: '#/definitions/models.Meeting'
+      message:
+        type: string
+    type: object
+  models.Meeting:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: integer
+      link:
+        type: string
+      room_id:
+        type: string
+      start_time:
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API бэкенда видеоконференций.
+  title: Video Conference API
+  version: "1.0"
+paths:
+  /meetings:
+    post:
+      consumes:
+      - application/json
+      description: Дата ДД.ММ.ГГГГ, время ЧЧ:ММ. При пересечении слотов — 409.
+      parameters:
+      - description: Данные встречи
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateMeetingBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.CreateMeetingSuccess'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Создать встречу
+      tags:
+      - meetings
+  /meetings/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID встречи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: creator_id
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.DeleteMeetingBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.DeleteMeetingSuccess'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Удалить встречу
+      tags:
+      - meetings
+    get:
+      description: Параметр id — суффикс после /meeting/ или /room/ в link.
+      parameters:
+      - description: Код из ссылки
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.GetMeetingByCodeSuccess'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Встреча по коду ссылки
+      tags:
+      - meetings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID встречи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Поля для обновления
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateMeetingBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.UpdateMeetingSuccess'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Обновить встречу
+      tags:
+      - meetings
+  /meetings/current:
+    get:
+      description: Встреча на сегодня в интервале [start, start+duration).
+      parameters:
+      - description: ID создателя
+        in: query
+        name: creator_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.CurrentMeetingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Текущая встреча
+      tags:
+      - meetings
+  /meetings/reminders/status:
+    get:
+      parameters:
+      - description: ID комнаты
+        in: query
+        name: room_id
+        required: true
+        type: string
+      - description: Email
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.ReminderStatusSuccess'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Статус подписки на напоминание
+      tags:
+      - meetings
+  /meetings/reminders/subscribe:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: room_id и email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SubscribeReminderBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Уже подписан
+          schema:
+            $ref: '#/definitions/controllers.SimpleMessageSuccess'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/controllers.SubscribeReminderCreated'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Подписаться на напоминание
+      tags:
+      - meetings
+  /meetings/upcoming:
+    get:
+      parameters:
+      - description: ID создателя (UUID)
+        in: query
+        name: creator_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.MeetingsUpcomingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.ErrorJSON'
+      summary: Предстоящие встречи
+      tags:
+      - meetings
+schemes:
+- http
+swagger: "2.0"

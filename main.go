@@ -1,3 +1,9 @@
+// @title           Video Conference API
+// @version         1.0
+// @description     REST API бэкенда видеоконференций.
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @schemes         http
 package main
 
 import (
@@ -5,11 +11,14 @@ import (
 	"os"
 
 	"github.com/GeorgySavchuk/video-conference-app-backend/controllers"
+	_ "github.com/GeorgySavchuk/video-conference-app-backend/docs"
 	"github.com/GeorgySavchuk/video-conference-app-backend/initializers"
 	"github.com/GeorgySavchuk/video-conference-app-backend/middleware"
 	"github.com/GeorgySavchuk/video-conference-app-backend/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func init() {
@@ -25,6 +34,8 @@ func main() {
 	r := gin.Default()
 
 	r.Use(middleware.CORSMiddleware())
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Публичная раздача загруженных аватаров (без cookie — <img> с того же origin всё равно ок)
 	r.Static("/api/v1/uploads", "./uploads")

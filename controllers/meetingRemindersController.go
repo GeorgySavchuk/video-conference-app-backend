@@ -29,8 +29,17 @@ func findMeetingByRoomID(roomID string) (models.Meeting, error) {
 	return meeting, err
 }
 
-// MeetingReminderStatus GET /meetings/reminders/status?room_id=&email=
-// Проверка, есть ли уже подписка на напоминание для этой почты и комнаты.
+// MeetingReminderStatus проверяет подписку на напоминание для email и комнаты.
+// @Summary      Статус подписки на напоминание
+// @Tags         meetings
+// @Produce      json
+// @Param        room_id  query  string  true  "ID комнаты"
+// @Param        email    query  string  true  "Email"
+// @Success      200  {object}  ReminderStatusSuccess
+// @Failure      400  {object}  ErrorJSON
+// @Failure      404  {object}  ErrorJSON
+// @Failure      500  {object}  ErrorJSON
+// @Router       /meetings/reminders/status [get]
 func MeetingReminderStatus(c *gin.Context) {
 	roomID := strings.TrimSpace(c.Query("room_id"))
 	email := strings.TrimSpace(strings.ToLower(c.Query("email")))
@@ -64,8 +73,18 @@ func MeetingReminderStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"subscribed": count > 0})
 }
 
-// SubscribeMeetingReminder POST /meetings/reminders/subscribe
-// body: { "room_id": "<UUID комнаты>", "email": "..." }
+// SubscribeMeetingReminder создаёт подписку на email-напоминание за ~15 минут до встречи.
+// @Summary      Подписаться на напоминание
+// @Tags         meetings
+// @Accept       json
+// @Produce      json
+// @Param        body  body  SubscribeReminderBody  true  "room_id и email"
+// @Success      200  {object}  SimpleMessageSuccess  "Уже подписан"
+// @Success      201  {object}  SubscribeReminderCreated
+// @Failure      400  {object}  ErrorJSON
+// @Failure      404  {object}  ErrorJSON
+// @Failure      500  {object}  ErrorJSON
+// @Router       /meetings/reminders/subscribe [post]
 func SubscribeMeetingReminder(c *gin.Context) {
 	var body struct {
 		RoomID string `json:"room_id" binding:"required"`
