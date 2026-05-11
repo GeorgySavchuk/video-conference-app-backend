@@ -14,6 +14,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// SignUp регистрация нового пользователя.
+// @Summary      Регистрация
+// @Description  Создаёт пользователя; аватар — случайный пресет.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      AuthSignupBody  true  "Логин, email, пароль"
+// @Success      200   {object}  EmptySuccess
+// @Failure      400   {object}  ErrorJSON
+// @Router       /auth/signup [post]
 func SignUp(c *gin.Context) {
 	var body struct {
 		Name     string `json:"name"`
@@ -88,6 +98,15 @@ func SignUp(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// Login выдаёт JWT в cookie Authorization.
+// @Summary      Вход
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      AuthLoginBody  true  "Логин и пароль"
+// @Success      200   {object}  AuthSessionSuccess
+// @Failure      400   {object}  ErrorJSON
+// @Router       /auth/signin [post]
 func Login(c *gin.Context) {
 	var body struct {
 		Name     string `json:"name"`
@@ -147,6 +166,12 @@ func Login(c *gin.Context) {
 	})
 }
 
+// Logout сбрасывает cookie авторизации.
+// @Summary      Выход
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  SimpleMessageSuccess
+// @Router       /auth/logout [post]
 func Logout(c *gin.Context) {
 	c.SetCookie("Authorization", "", -1, "", "", false, true)
 
@@ -155,6 +180,14 @@ func Logout(c *gin.Context) {
 	})
 }
 
+// Validate проверяет сессию по cookie JWT.
+// @Summary      Проверка сессии
+// @Tags         auth
+// @Produce      json
+// @Security     CookieAuth
+// @Success      200  {object}  AuthSessionSuccess
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /auth/validate [get]
 func Validate(c *gin.Context) {
 	raw, ok := c.Get("user")
 	if !ok {

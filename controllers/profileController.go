@@ -26,6 +26,17 @@ func deleteOldAvatarFile(avatar string) {
 }
 
 // SetAvatarPreset PUT /profile/avatar/preset — только пресет, старый файл удаляется.
+// @Summary      Пресет аватара
+// @Tags         profile
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        body  body      AvatarPresetBody  true  "preset: p0–p7"
+// @Success      200   {object}  ProfileUserJSON
+// @Failure      400   {object}  ErrorJSON
+// @Failure      401   {string}  string  "Unauthorized"
+// @Failure      500   {object}  ErrorJSON
+// @Router       /profile/avatar/preset [put]
 func SetAvatarPreset(c *gin.Context) {
 	u, ok := c.Get("user")
 	if !ok {
@@ -57,6 +68,18 @@ func SetAvatarPreset(c *gin.Context) {
 }
 
 // UploadAvatar POST /profile/avatar — multipart field "file".
+// @Summary      Загрузка аватара
+// @Description  Форма: поле file, до 2 МБ, JPEG/PNG/WebP.
+// @Tags         profile
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     CookieAuth
+// @Param        file  formData  file  true  "Изображение"
+// @Success      200   {object}  ProfileUserJSON
+// @Failure      400   {object}  ErrorJSON
+// @Failure      401   {string}  string  "Unauthorized"
+// @Failure      500   {object}  ErrorJSON
+// @Router       /profile/avatar [post]
 func UploadAvatar(c *gin.Context) {
 	u, ok := c.Get("user")
 	if !ok {
@@ -124,6 +147,17 @@ func UploadAvatar(c *gin.Context) {
 }
 
 // UpdateProfileName PUT /profile/name — смена отображаемого имени (уникальное в системе).
+// @Summary      Смена имени
+// @Tags         profile
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        body  body      ProfileNameBody  true  "Новое имя"
+// @Success      200   {object}  ProfileUserJSON
+// @Failure      400   {object}  ErrorJSON
+// @Failure      401   {string}  string  "Unauthorized"
+// @Failure      500   {object}  ErrorJSON
+// @Router       /profile/name [put]
 func UpdateProfileName(c *gin.Context) {
 	u, ok := c.Get("user")
 	if !ok {

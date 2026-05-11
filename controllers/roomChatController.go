@@ -33,6 +33,15 @@ func roomChatMessageJSON(m *models.RoomChatMessage) gin.H {
 }
 
 // ListRoomChat GET /rooms/:roomId/chat — история доступна всем (гости без «прочитано»).
+// @Summary      История чата комнаты
+// @Description  До 500 сообщений; lastReadMessageId только для авторизованного пользователя.
+// @Tags         rooms
+// @Produce      json
+// @Param        roomId  path  string  true  "UUID комнаты"
+// @Success      200     {object}  RoomChatListResponse
+// @Failure      400     {object}  ErrorJSON
+// @Failure      500     {object}  ErrorJSON
+// @Router       /rooms/{roomId}/chat [get]
 func ListRoomChat(c *gin.Context) {
 	roomID := strings.TrimSpace(c.Param("roomId"))
 	if roomID == "" {
@@ -67,6 +76,18 @@ func ListRoomChat(c *gin.Context) {
 }
 
 // PutRoomChatRead PUT /rooms/:roomId/chat/read — обновить курсор «прочитано до сообщения id».
+// @Summary      Отметить прочитанное в чате
+// @Tags         rooms
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        roomId  path      string              true  "UUID комнаты"
+// @Param        body    body      PutRoomChatReadBody  true  "ID последнего прочитанного сообщения"
+// @Success      200     {object}  PutRoomChatReadSuccess
+// @Failure      400     {object}  ErrorJSON
+// @Failure      401     {string}  string  "Unauthorized"
+// @Failure      500     {object}  ErrorJSON
+// @Router       /rooms/{roomId}/chat/read [put]
 func PutRoomChatRead(c *gin.Context) {
 	roomID := strings.TrimSpace(c.Param("roomId"))
 	if roomID == "" {
@@ -145,6 +166,17 @@ func isValidGuestPeerID(s string) bool {
 }
 
 // PostRoomChat POST /rooms/:roomId/chat — залогиненный по cookie; иначе гость с guestPeerId + displayName.
+// @Summary      Отправить сообщение в чат
+// @Description  С сессией — только text; без сессии — text, displayName, guestPeerId.
+// @Tags         rooms
+// @Accept       json
+// @Produce      json
+// @Param        roomId  path      string             true  "UUID комнаты"
+// @Param        body    body      PostRoomChatBody   true  "Текст сообщения"
+// @Success      201     {object}  PostRoomChatCreated
+// @Failure      400     {object}  ErrorJSON
+// @Failure      500     {object}  ErrorJSON
+// @Router       /rooms/{roomId}/chat [post]
 func PostRoomChat(c *gin.Context) {
 	roomID := strings.TrimSpace(c.Param("roomId"))
 	if roomID == "" {

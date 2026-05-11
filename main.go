@@ -1,9 +1,12 @@
 // @title           Video Conference API
 // @version         1.0
-// @description     REST API бэкенда видеоконференций.
+// @description     REST API бэкенда видеоконференций. Авторизация: JWT в HttpOnly cookie `Authorization` после POST /auth/signin.
 // @host            localhost:8080
 // @BasePath        /api/v1
 // @schemes         http
+// @securityDefinitions.apikey CookieAuth
+// @in cookie
+// @name Authorization
 package main
 
 import (
